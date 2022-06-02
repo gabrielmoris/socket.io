@@ -36,3 +36,9 @@ module.exports.addMessage = (user, message) => {
     const params = [user, message];
     return db.query(q, params);
 };
+
+module.exports.deleteUser = (id) => {
+    const q = `DELETE FROM users WHERE id=$1`;
+    const params = [id];
+    return db.query(q, params);
+};

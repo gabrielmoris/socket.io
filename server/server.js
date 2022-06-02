@@ -2,6 +2,7 @@ const express = require("express");
 const cookieSession = require("cookie-session");
 const SocketIOServer = require("socket.io");
 const db = require("./db.js");
+// const cors = require("cors");
 const app = express();
 const server = require("http").Server(app);
 
@@ -17,25 +18,64 @@ const io = SocketIOServer(server, {
     },
 });
 
-app.use(express.json());
+// const corsOptions = {
+//     origin: "*",
+//     credentials: true, //access-control-allow-credentials:true
+//     optionSuccessStatus: 200,
+// };
+
 const cookieSessionMiddleware = cookieSession({
-    // secret: secretcookie.cookieSecret,
-    secret: "P4Y45OQU3M1R45",
+    name: "session",
+    secret: "P4Y45OQU3M1R45?",
     maxAge: 100 * 60 * 60 * 24 * 14,
-    sameSite: true,
+    secure: false,
+    domain: "http://localhost:3000/",
 });
 
+// app.use(cors(corsOptions));
+app.use(express.json());
 app.use(cookieSessionMiddleware);
 
 io.use(function (socket, next) {
     cookieSessionMiddleware(socket.request, socket.request.res, next);
 });
 
+app.post("/users", async function (req, res) {
+    const name = req.body.name;
+    console.log("body", req.body);
+    await db
+        .addUser(name)
+        .then(({ rows }) => {
+            const id = rows[0].id;
+            console.log("i am here!!!", id);
+            req.session.userId = id;
+            console.log("i was here", req.session.userId);
+            return rows[0];
+        })
+        .then((results) => {
+            const name = results.name;
+            console.log("NAME", name);
+            res.json({ response: name, success: true });
+            // console.log("rows-->", results);
+        })
+        .catch((e) => {
+            res.json({ error: e, success: false });
+        });
+
+    await console.log(req.session);
+});
+
+app.get("/users", (req, res) => {
+    req.session.cookiRandom = "hello"
+    console.log("from users", req.session);
+    res.json({ response: req.session, success: true });
+});
+
 app.get("*", function (req, res) {
     res.json({ "yes, i am working": "just do your things and leave me alone" });
 });
 
-server.listen(process.env.PORT || 3030, function () {
+server.listen(process.env.PORT || 3001, function () {
     console.log("I'm listening.");
 });
 
